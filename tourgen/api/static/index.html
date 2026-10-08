@@ -1,0 +1,148 @@
+<!doctype html>
+<!--
+FILE: tourgen/api/static/index.html
+ROLE: Minimal single-page UI for tourgen (Phase 6.2): upload → review/edit plan →
+      approve cost → watch progress → download. Talks only to tourgen/api/app.py.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>tourgen</title>
+<style>
+  :root { --bg:#fafaf8; --fg:#1d1d1b; --muted:#6b6b66; --line:#deded8; --accent:#2f6f5e; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#161615; --fg:#ecece8; --muted:#a3a39c; --line:#33332f; --accent:#6cc0a6; } }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.5 system-ui, sans-serif; }
+  main { max-width:760px; margin:0 auto; padding:24px 16px 64px; }
+  h1 { font-size:22px; margin:0 0 4px; } p.sub { color:var(--muted); margin:0 0 24px; }
+  section { border-top:1px solid var(--line); padding:18px 0; }
+  h2 { font-size:15px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:0 0 12px; }
+  label { display:block; margin:8px 0; }
+  textarea, input[type=file], select { width:100%; box-sizing:border-box; font:inherit; }
+  button { font:inherit; padding:6px 14px; border-radius:6px; border:1px solid var(--accent); background:var(--accent); color:#fff; cursor:pointer; }
+  button.ghost { background:transparent; color:var(--fg); border-color:var(--line); padding:2px 8px; }
+  button:disabled { opacity:.5; cursor:default; }
+  ol#shots { padding-left:22px; } ol#shots li { margin:6px 0; }
+  .muted { color:var(--muted); } .err { color:#c0392b; } pre { white-space:pre-wrap; margin:0; }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>tourgen</h1>
+  <p class="sub">Animate the camera, never alter the house.</p>
+
+  <section id="s-upload">
+    <h2>1 · Upload</h2>
+    <label>Photos / videos <input id="files" type="file" multiple accept="image/*,video/*"></label>
+    <label>Brief <textarea id="brief" rows="2" placeholder="Audience, tone, agent name…"></textarea></label>
+    <label>Format <select id="format"><option value="social">Social (45–75 s)</option><option value="full">Full tour (90–150 s)</option></select></label>
+    <label><input id="fakegen" type="checkbox"> Fake generation (no Higgsfield calls)</label>
+    <label><input id="fakellm" type="checkbox"> Fake Claude (offline, filename-based)</label>
+    <button id="create">Create &amp; plan</button>
+    <p class="muted">Only upload material you have the rights to use.</p>
+  </section>
+
+  <section id="s-plan" hidden>
+    <h2>2 · Review plan</h2>
+    <ol id="shots"></ol>
+    <button id="save" class="ghost">Save order</button>
+    <pre id="estimate" class="muted"></pre>
+    <p><button id="approve">Approve cost &amp; generate</button></p>
+  </section>
+
+  <section id="s-progress" hidden>
+    <h2>3 · Progress</h2>
+    <pre id="stages"></pre>
+    <p id="downloads"></p>
+  </section>
+  <p id="error" class="err"></p>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+let jobId = null, plan = null, estimate = null;
+
+function fail(msg) { $("error").textContent = msg; }
+async function api(path, opts = {}) {
+  const res = await fetch(path, opts);
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(JSON.stringify(body.detail || body));
+  return body;
+}
+
+$("create").onclick = async () => {
+  try {
+    fail("");
+    const form = new FormData();
+    for (const f of $("files").files) form.append("files", f);
+    form.append("brief", $("brief").value);
+    form.append("format", $("format").value);
+    form.append("fake_generation", $("fakegen").checked);
+    form.append("fake_llm", $("fakellm").checked);
+    $("create").disabled = true;
+    jobId = (await api("/api/jobs", { method: "POST", body: form })).job_id;
+    await api(`/api/jobs/${jobId}/plan`, { method: "POST" });
+    watch(() => loadPlan());
+  } catch (e) { fail(e.message); $("create").disabled = false; }
+};
+
+function renderShots() {
+  const ol = $("shots"); ol.innerHTML = "";
+  plan.shots.forEach((s, i) => {
+    const li = document.createElement("li");
+    li.innerHTML = `<b>${s.on_screen_text || s.room_id}</b> · ${s.camera_move.type} · ${s.duration_s}s
+      <span class="muted">${s.purpose}</span> `;
+    for (const [label, fn] of [["↑", () => move(i, -1)], ["↓", () => move(i, 1)], ["✕", () => drop(i)]]) {
+      const b = document.createElement("button"); b.className = "ghost"; b.textContent = label; b.onclick = fn; li.append(b);
+    }
+    ol.append(li);
+  });
+}
+function move(i, d) { const j = i + d; if (j < 0 || j >= plan.shots.length) return; [plan.shots[i], plan.shots[j]] = [plan.shots[j], plan.shots[i]]; renderShots(); }
+function drop(i) { plan.shots.splice(i, 1); renderShots(); }
+
+async function loadPlan() {
+  const data = await api(`/api/jobs/${jobId}`);
+  plan = data.plan; estimate = data.estimate;
+  if (!plan) { fail("Planning failed — see stage errors below."); return; }
+  $("s-plan").hidden = false; renderShots();
+  $("estimate").textContent = estimate ? estimate.lines.join("\n") : "";
+}
+
+$("save").onclick = async () => {
+  try {
+    await api(`/api/jobs/${jobId}/plan`, { method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ shot_ids: plan.shots.map((s) => s.shot_id) }) });
+    await loadPlan();
+  } catch (e) { fail(e.message); }
+};
+
+$("approve").onclick = async () => {
+  try {
+    $("approve").disabled = true;
+    const data = await api(`/api/jobs/${jobId}`);
+    await api(`/api/jobs/${jobId}/approve`, { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ approved_cost_usd: data.estimate ? data.estimate.total_usd : 0 }) });
+    watch(showDownloads);
+  } catch (e) { fail(e.message); $("approve").disabled = false; }
+};
+
+function watch(onEnd) {
+  $("s-progress").hidden = false;
+  const es = new EventSource(`/api/jobs/${jobId}/events`);
+  es.onmessage = (ev) => {
+    const stages = JSON.parse(ev.data);
+    $("stages").textContent = Object.entries(stages).map(([n, s]) =>
+      `${s.state === "done" ? "✓" : s.state === "running" ? "…" : s.state === "failed" ? "✗" : "·"} ${n.padEnd(10)} ${s.summary || s.error || ""}`).join("\n");
+  };
+  es.addEventListener("end", () => { es.close(); onEnd(); });
+}
+
+async function showDownloads() {
+  const data = await api(`/api/jobs/${jobId}`);
+  $("downloads").innerHTML = data.outputs.map((a) =>
+    `<a href="/api/jobs/${jobId}/download/${a.replace(":", "x")}">Download ${a}</a>`).join(" · ");
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,93 @@
+# Higgsfield image-to-video model registry (BUILD_PROMPT §4.1).
+# Prompt builders (generation/prompt_builders/) and the planner read capabilities from here.
+# Adding a model = new entry here + (maybe) a builder + a test.
+#
+# VERIFICATION STATUS: see docs/higgsfield-notes.md. Entries with `verified: false` were
+# NOT confirmed against docs.higgsfield.ai (egress-blocked during the initial build).
+# Re-check endpoint paths, field names and duration ranges before any real run.
+# `usd_per_second` values are placeholder estimates used only by `tourgen estimate`.
+
+models:
+  kling-3.0:
+    family: kling
+    endpoint: kling-video/v3.0/pro/image-to-video
+    first_frame_field: image_url
+    last_frame_field: last_image_url
+    supports_last_frame: true
+    duration_field: duration
+    duration_min_s: 3
+    duration_max_s: 15
+    integer_durations: true
+    resolutions: ["720p", "1080p"]
+    default_resolution: "1080p"
+    resolution_field: null
+    prompt_field: prompt
+    prompt_max_chars: 2500
+    negative_prompt_field: negative_prompt
+    usd_per_second: 0.11
+    relative_cost: 2
+    verified: false
+    notes: "First+last frame transitions. Multi-shot mode not used in v1."
+
+  kling-3.0-turbo:
+    family: kling
+    endpoint: kling-video/v3.0/turbo/image-to-video
+    first_frame_field: image_url
+    last_frame_field: null
+    supports_last_frame: false
+    duration_field: duration
+    duration_min_s: 3
+    duration_max_s: 15
+    integer_durations: true
+    resolutions: ["720p", "1080p"]
+    default_resolution: "720p"
+    resolution_field: resolution
+    prompt_field: prompt
+    prompt_max_chars: 2500
+    negative_prompt_field: negative_prompt
+    usd_per_second: 0.06
+    relative_cost: 1
+    verified: false
+    notes: "Cheap single-image moves; no last-frame field."
+
+  seedance-2.0:
+    family: seedance
+    endpoint: bytedance/seedance-2.0/image-to-video
+    first_frame_field: image_url
+    last_frame_field: end_image_url
+    supports_last_frame: true
+    duration_field: duration
+    duration_min_s: 4
+    duration_max_s: 15
+    integer_durations: true
+    resolutions: ["720p", "1080p"]
+    default_resolution: "1080p"
+    resolution_field: resolution
+    prompt_field: prompt
+    prompt_max_chars: 2000
+    negative_prompt_field: null
+    usd_per_second: 0.30
+    relative_cost: 4
+    verified: false
+    notes: "Explicit duration required."
+
+  wan-2.7:
+    family: wan
+    endpoint: wan/v2.7/image-to-video
+    first_frame_field: image_url
+    last_frame_field: end_image_url
+    supports_last_frame: true
+    duration_field: duration
+    duration_min_s: 2
+    duration_max_s: 10
+    integer_durations: true
+    resolutions: ["720p", "1080p"]
+    default_resolution: "720p"
+    resolution_field: resolution
+    prompt_field: prompt
+    prompt_max_chars: 1500
+    negative_prompt_field: negative_prompt
+    usd_per_second: 0.08
+    relative_cost: 1
+    verified: false
+    notes: "Fallback family when Kling struggles on a shot."

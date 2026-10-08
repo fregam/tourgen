@@ -1,0 +1,14 @@
+# Default tour settings. A job's Brief overrides these. Loaded by tourgen/config.py.
+social_length_s: [45, 75]
+full_length_s: [90, 150]
+shot_duration_s: [3, 6]
+transition: dissolve
+transition_duration_s: 0.5
+music_mood: warm
+disclosure_text: "Video animated with AI from real property photos."
+aspect_ratios: ["16:9", "9:16"]
+fps: 30
+preferred_model: kling-3.0
+transition_model: kling-3.0
+title_card_s: 2.5
+end_card_s: 3.0
