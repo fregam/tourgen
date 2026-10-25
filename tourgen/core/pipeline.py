@@ -54,6 +54,7 @@ def stage_modules() -> dict[StageName, ModuleType]:
         generate,
         ingest,
         normalize,
+        notify,
         plan,
         qa,
         understand,
@@ -69,6 +70,7 @@ def stage_modules() -> dict[StageName, ModuleType]:
         StageName.QA: qa,
         StageName.ASSEMBLE: assemble,
         StageName.DELIVER: deliver,
+        StageName.NOTIFY: notify,
     }
     return modules
 

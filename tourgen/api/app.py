@@ -3,7 +3,8 @@ FILE: tourgen/api/app.py
 ROLE: Phase 6 HTTP API + static single-page UI. Thin layer over core/pipeline.py.
 
 HOW IT WORKS:
-  - POST /api/jobs                 multipart upload (photos/videos) + brief → creates a job
+  - POST /api/jobs                 multipart: photos/videos and/or a listing `url`, optional
+                                   `email` (comma-separated) + brief → creates a job
   - POST /api/jobs/{id}/plan       runs stages up to COMPILE in a background thread
   - GET  /api/jobs/{id}            job state, plan, estimate
   - PUT  /api/jobs/{id}/plan       reorder/drop shots (rule-validated), resets downstream stages
@@ -56,6 +57,7 @@ from tourgen.models.job import (
     StageStatus,
 )
 from tourgen.models.plan import TourPlan
+from tourgen.notify.email import valid_email
 
 STATIC_DIR = Path(__file__).parent / "static"
 
@@ -106,12 +108,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.post("/api/jobs")
     async def create(
-        files: list[UploadFile] = File(...),
+        files: list[UploadFile] | None = File(None),
+        url: str = Form(""),
+        email: str = Form(""),
         brief: str = Form(""),
         format: str = Form("social"),
         fake_generation: bool = Form(False),
         fake_llm: bool = Form(False),
     ) -> dict[str, str]:
+        recipients = [e.strip() for e in email.split(",") if e.strip()]
+        bad = [e for e in recipients if not valid_email(e)]
+        if bad:
+            raise HTTPException(422, f"invalid email address: {', '.join(bad)}")
+        urls = [url.strip()] if url.strip() else []
+        if not files and not urls:
+            raise HTTPException(422, "upload photos/videos or give a listing URL")
         job_id = datetime.now(UTC).strftime("web-%Y%m%d-%H%M%S-%f")
         options = JobOptions(
             fake_generation=fake_generation,
@@ -122,14 +133,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
         ws = create_job(settings, job_id, JobInputs(), options)
         ws.uploads_dir.mkdir(parents=True, exist_ok=True)
-        for upload in files:
+        for upload in files or []:
             name = Path(upload.filename or "upload").name
             if classify(Path(name)) is None:
                 continue
             with (ws.uploads_dir / name).open("wb") as handle:
                 shutil.copyfileobj(upload.file, handle)
         job = ws.load_job()
-        job.inputs = JobInputs(paths=[str(ws.uploads_dir)], brief=Brief(text=brief, format=format))
+        job.inputs = JobInputs(
+            paths=[str(ws.uploads_dir)] if files else [],
+            urls=urls,
+            brief=Brief(text=brief, format=format),
+            notify_email=recipients,
+        )
         ws.save_job(job)
         return {"job_id": job_id}
 

@@ -187,8 +187,11 @@ def download_images(
     out_dir.mkdir(parents=True, exist_ok=True)
     try:
         for index, image_url in enumerate(urls):
-            suffix = Path(urlparse(image_url).path).suffix.lower() or ".jpg"
-            dest = out_dir / f"listing_{index:03d}{suffix}"
+            url_path = Path(urlparse(image_url).path)
+            suffix = url_path.suffix.lower() or ".jpg"
+            # Keep the site's filename: it often names the room and is shown to Claude.
+            stem = re.sub(r"[^A-Za-z0-9_-]+", "_", url_path.stem)[:60] or "image"
+            dest = out_dir / f"listing_{index:03d}_{stem}{suffix}"
             if not dest.exists():
                 try:
                     response = client.get(image_url)

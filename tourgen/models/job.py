@@ -12,7 +12,8 @@ CONNECTS TO:
   - core/pipeline.py, core/costs.py, cli.py, api/app.py
 
 INVARIANTS / GOTCHAS:
-  - Stage order is defined by STAGE_ORDER; keep it in sync with BUILD_PROMPT §3.
+  - Stage order is defined by STAGE_ORDER; keep it in sync with BUILD_PROMPT §3
+    plus stage 10 NOTIFY (docs/decisions/0006-url-to-inbox.md).
 """
 
 from __future__ import annotations
@@ -33,6 +34,7 @@ class StageName(StrEnum):
     QA = "qa"
     ASSEMBLE = "assemble"
     DELIVER = "deliver"
+    NOTIFY = "notify"
 
 
 STAGE_ORDER: list[StageName] = list(StageName)
@@ -71,12 +73,14 @@ class JobInputs(BaseModel):
     urls: list[str] = []
     floor_plan: str | None = None
     brief: Brief = Brief()
+    notify_email: list[str] = Field(default=[], description="Recipients of the final videos")
 
 
 class JobOptions(BaseModel):
     fake_generation: bool = False
     fake_llm: bool = False
     dry_run: bool = False
+    email_outbox: bool = False  # write the email to render/email/outbox instead of sending
     max_shots: int = 30
     max_retries: int = 2
     budget_usd: float = 25.0

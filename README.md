@@ -40,11 +40,22 @@ tourgen render house1    # final videos, manifest.json, report.md
 Or all at once: `tourgen run ./my-photos --job-id house1 --yes --budget 20`.
 Any command can be re-run; finished work is reused, never paid for twice.
 
+## From a listing link to your inbox
+```bash
+tourgen doctor --url https://listing.example/123 --email you@example.com   # what's missing?
+tourgen run --url https://listing.example/123 --email you@example.com --yes --budget 20
+```
+This scrapes the listing's photos, builds the tour and emails both videos (16:9 and 9:16,
+compressed to fit email limits; full quality stays in `jobs/<id>/render/`). Email needs SMTP
+settings in `.env` (see `.env.example`; for Gmail use an app password). Add `--email-outbox`
+to write the email as a `.eml` file instead of sending it. `tourgen send <job> --to …` re-sends.
+The web UI (`tourgen serve`) has the same fields: listing URL and email.
+
 Web UI: `tourgen serve`, then open http://127.0.0.1:8000.
 
 ## Useful flags
 `--dry-run` (stop before Higgsfield) · `--budget USD` · `--max-shots N` · `--max-retries N` ·
-`--url <listing>` · `--floor-plan plan.png` · `--aspect 9:16` · `--fake-generation` · `--fake-llm`
+`--url <listing>` · `--email you@x.com` · `--email-outbox` · `--floor-plan plan.png` · `--aspect 9:16` · `--fake-generation` · `--fake-llm`
 
 ## Before your first paid run
 Higgsfield model endpoints and prices in `config/models.yaml` have not been verified against

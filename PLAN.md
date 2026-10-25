@@ -1,6 +1,6 @@
 # PLAN — tourgen
 Status legend: [ ] todo · [x] done · [~] in progress · [!] blocked (add reason)
-Last updated: 2026-10-08 by initial build session (phases 0–6 built offline; real-API steps open)
+Last updated: 2026-10-25 — added Phase 8 (listing URL → email delivery); real-API steps still open
 
 ## Phase 0 — Foundations
 - [x] 0.1 Repo scaffold: pyproject (uv), ruff, mypy, pytest, Makefile, .env.example, .gitignore
@@ -78,3 +78,13 @@ Last updated: 2026-10-08 by initial build session (phases 0–6 built offline; r
   - [ ] structured (JSON) log format
 - [ ] 7.2 Prompt/version evaluation set (5+ sample properties, scored QA pass rate)
 - [x] 7.3 README for humans
+
+## Phase 8 — URL in, email out (ADR 0006)
+- [x] 8.1 Stage 10 `notify`: SMTP email with size-fitted video attachments; outbox mode; never resends on resume
+- [x] 8.2 `--email` on new/run, `tourgen send <job> --to …`
+- [x] 8.3 Preflight checks: `tourgen doctor`, automatic at the start of `tourgen run`
+- [x] 8.4 Web API/UI: create a job from a listing URL + email recipients
+- [x] 8.5 Keep listing image filenames through ingest (room hints for Claude)
+- [x] DoD (offline): `tourgen run --url <local fake listing> --email … --email-outbox --fake-*` → .eml with both videos (tests/integration/test_url_to_inbox.py)
+- [ ] DoD (real): one real listing URL → email received in a real inbox
+  - needs: ANTHROPIC_API_KEY, HF_KEY, TOURGEN_SMTP_* in .env; network access to the listing site, api.higgsfield.ai and the SMTP server; Phase 0.3/3.6 done

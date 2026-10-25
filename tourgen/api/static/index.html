@@ -34,7 +34,9 @@ ROLE: Minimal single-page UI for tourgen (Phase 6.2): upload → review/edit pla
 
   <section id="s-upload">
     <h2>1 · Upload</h2>
-    <label>Photos / videos <input id="files" type="file" multiple accept="image/*,video/*"></label>
+    <label>Listing URL <input id="url" type="url" placeholder="https://…" style="width:100%;box-sizing:border-box;font:inherit"></label>
+    <label>…and/or photos / videos <input id="files" type="file" multiple accept="image/*,video/*"></label>
+    <label>Email the finished videos to <input id="email" type="email" placeholder="you@example.com" style="width:100%;box-sizing:border-box;font:inherit"></label>
     <label>Brief <textarea id="brief" rows="2" placeholder="Audience, tone, agent name…"></textarea></label>
     <label>Format <select id="format"><option value="social">Social (45–75 s)</option><option value="full">Full tour (90–150 s)</option></select></label>
     <label><input id="fakegen" type="checkbox"> Fake generation (no Higgsfield calls)</label>
@@ -75,6 +77,8 @@ $("create").onclick = async () => {
     fail("");
     const form = new FormData();
     for (const f of $("files").files) form.append("files", f);
+    form.append("url", $("url").value);
+    form.append("email", $("email").value);
     form.append("brief", $("brief").value);
     form.append("format", $("format").value);
     form.append("fake_generation", $("fakegen").checked);
@@ -141,7 +145,9 @@ function watch(onEnd) {
 async function showDownloads() {
   const data = await api(`/api/jobs/${jobId}`);
   $("downloads").innerHTML = data.outputs.map((a) =>
-    `<a href="/api/jobs/${jobId}/download/${a.replace(":", "x")}">Download ${a}</a>`).join(" · ");
+    `<a href="/api/jobs/${jobId}/download/${a.replace(":", "x")}">Download ${a}</a>`).join(" · ")
+    + (data.job.inputs.notify_email.length && data.job.stages.notify.state === "done"
+       ? `<br><span class="muted">Emailed to ${data.job.inputs.notify_email.join(", ")}</span>` : "");
 }
 </script>
 </body>

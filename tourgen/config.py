@@ -74,6 +74,17 @@ class Settings(BaseSettings):
     max_retries: int = 2
     max_shots: int = 30
 
+    # Email delivery (stage 10). Any SMTP server works, e.g. Gmail with an app password:
+    # host smtp.gmail.com, port 587, user = your address, password = the app password.
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_user: str | None = None
+    smtp_password: str | None = None
+    smtp_from: str | None = None  # defaults to smtp_user
+    smtp_starttls: bool = True
+    email_max_attachments_mb: float = 18.0  # total; ~25 MB provider caps after base64
+    email_outbox_only: bool = False  # write .eml to render/outbox instead of sending
+
     # Media
     max_image_side_px: int = 2560
     render_scale: float = 1.0  # <1 renders smaller (tests/dev previews); 1.0 = 1080p

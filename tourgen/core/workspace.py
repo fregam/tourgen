@@ -147,6 +147,15 @@ class Workspace:
         return self.render_dir / "report.md"
 
     @property
+    def notify_file(self) -> Path:
+        return self.render_dir / "notify.json"
+
+    @property
+    def email_dir(self) -> Path:
+        """Email-sized copies of the renders and the .eml outbox."""
+        return self.render_dir / "email"
+
+    @property
     def log_file(self) -> Path:
         return self.root / "job.log"
 

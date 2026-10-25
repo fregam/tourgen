@@ -17,9 +17,10 @@
 ## Commands
 make setup | make lint | make typecheck | make test | make run-sample
 tourgen run <input_dir_or_url> --fake-generation
+tourgen run --url <listing> --email <address> --yes   # URL → inbox (needs keys + SMTP; check with `tourgen doctor`)
 (`--fake-llm` additionally replaces Claude with the offline FakeLLM; needed without ANTHROPIC_API_KEY.)
 
 ## Environment notes
 - Needs ffmpeg/ffprobe on PATH and a TTF font (default DejaVuSans; override TOURGEN_FONT_PATH).
-- Secrets in `.env` (see `.env.example`): ANTHROPIC_API_KEY, HF_KEY (key_id:key_secret).
+- Secrets in `.env` (see `.env.example`): ANTHROPIC_API_KEY, HF_KEY (key_id:key_secret), TOURGEN_SMTP_* for email.
 - `TOURGEN_RENDER_SCALE=0.3` renders small previews fast.

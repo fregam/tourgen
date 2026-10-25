@@ -52,3 +52,15 @@ def test_upload_plan_edit_approve_download(settings: Settings) -> None:
     video = client.get(f"/api/jobs/{job_id}/download/16x9")
     assert video.status_code == 200 and video.headers["content-type"] == "video/mp4"
     assert client.get("/api/jobs/missing").status_code == 404
+
+
+def test_create_validates_url_and_email(settings: Settings) -> None:
+    client = TestClient(create_app(settings))
+    assert client.post("/api/jobs", data={"brief": "x"}).status_code == 422
+    bad = client.post("/api/jobs", data={"url": "https://a.example/1", "email": "nope"})
+    assert bad.status_code == 422
+    ok = client.post("/api/jobs", data={"url": "https://a.example/1", "email": "a@x.com, b@y.org"})
+    job = client.get(f"/api/jobs/{ok.json()['job_id']}").json()["job"]
+    assert job["inputs"]["urls"] == ["https://a.example/1"]
+    assert job["inputs"]["notify_email"] == ["a@x.com", "b@y.org"]
+    assert job["inputs"]["paths"] == []

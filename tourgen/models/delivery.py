@@ -1,15 +1,16 @@
 """
 FILE: tourgen/models/delivery.py
-ROLE: Schemas for final deliverables (stage 9): provenance manifest.
+ROLE: Schemas for final deliverables: provenance manifest (stage 9) and the
+      email notification record (stage 10).
 
 HOW IT WORKS:
   - Manifest links every clip in the final cut to its source assets, prompt,
     model, request_id and QA verdict (BUILD_PROMPT §3 step 9).
 
-READS/WRITES: render/manifest.json
+READS/WRITES: render/manifest.json, render/notify.json
 
 CONNECTS TO:
-  - Produced by stages/deliver.py; read by api/app.py for downloads.
+  - Produced by stages/deliver.py and stages/notify.py; read by api/app.py.
 """
 
 from __future__ import annotations
@@ -32,6 +33,23 @@ class ManifestClip(BaseModel):
     qa_verdict: str
     fidelity_score: float | None
     used_fallback: bool
+
+
+class EmailAttachment(BaseModel):
+    filename: str
+    path: str  # relative to job root (the email-sized copy, not the master render)
+    size_bytes: int
+
+
+class NotifyRecord(BaseModel):
+    """Proof that the email went out; its presence makes stage 10 complete."""
+
+    recipients: list[str]
+    subject: str
+    sent_at: datetime
+    transport: str  # "smtp" | "outbox"
+    attachments: list[EmailAttachment]
+    skipped: list[str] = []  # renders that could not be made small enough to attach
 
 
 class Manifest(BaseModel):
